@@ -38,6 +38,37 @@ async def escuchar(client, sub1, sub2, queue1, queue2):
         elif message.topic.matches(sub2):
             await queue2.put(message)
 
+class Estado:
+    def __init__(self):
+        self.contador = 0
+
+async def incrementar(estado): #Aumento el contador cada 3 segundos
+    asyncio.current_task().set_name("Incremento")
+    while True:
+        await asyncio.sleep(3)
+        estado.contador = estado.contador + 1
+
+async def publicar(client, topico_pub, estado): #
+    asyncio.current_task().set_name("Publicar")
+    while True:
+        await asyncio.sleep(5)
+        await client.publish(topico_pub, str(estado.contador))
+        logging.info(f"Contador ({estado.contador}) publicado en {topico_pub}")
+
+async def atender(queue, nombre_tarea):
+    asyncio.current_task().set_name(nombre_tarea)
+    while True:
+        mensaje = await queue.get()
+        logging.info(f"Recibido en {mensaje.topic}: {mensaje.payload.decode('utf-8')}")
+
+async def escuchar(client, sub1, sub2, queue1, queue2):
+    asyncio.current_task().set_name("enviar")
+    async for message in client.messages:
+        if message.topic.matches(sub1):
+            await queue1.put(message)
+        elif message.topic.matches(sub2):
+            await queue2.put(message)
+
 async def main():
     tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     tls_context.verify_mode = ssl.CERT_REQUIRED
@@ -73,4 +104,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        pass
+        logging.info("Desconectado.")
